@@ -1,0 +1,45 @@
+--maximum-line-length=100
+
+--add-interbracket-arrows
+--interbracket-arrow-style=']->{ }->['
+--add-trailing-commas
+-pt=2
+-bt=2
+-sbt=2
+-bbt=2
+
+--line-up-parentheses
+--line-up-parentheses-exclusion-list="f("
+
+--opening-brace-on-new-line
+--brace-left-list='if elsif else'
+
+--continuation-indentation=4
+--minimize-continuation-indentation
+
+--tight-secret-operators
+--nospace-for-semicolon
+--cuddled-else
+--cuddled-break-option=2
+--opening-brace-always-on-right
+--cuddled-paren-brace
+
+--vertical-tightness=1
+--vertical-tightness-closing=1
+--stack-opening-tokens
+--stack-opening-tokens
+
+--weld-nested-containers
+--weld-fat-comma
+--delete-weld-interfering-commas
+
+--maximum-fields-per-table=1
+--comma-arrow-breakpoints=0
+
+--nobreak-at-old-logical-breakpoints
+--break-at-old-comma-breakpoints
+
+--warn-missing-else
+
+--valign-if-unless
+--valign-exclusion-list="= q"

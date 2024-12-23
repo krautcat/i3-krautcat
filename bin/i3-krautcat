@@ -1,0 +1,5 @@
+#!/usr/bin/env perl
+
+use App::I3::Krautcat;
+
+App::I3::Krautcat->run();

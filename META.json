@@ -1,0 +1,7 @@
+{
+    "version" : "0.1.0",
+    "name"    : "App-I3-Krautcat",
+    "author"  : "Georgiy Odisharia",
+    "abstract": "App for interacting with i3 window manager",
+    "license" : "perl"
+}
