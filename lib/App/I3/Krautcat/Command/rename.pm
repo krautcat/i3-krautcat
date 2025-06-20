@@ -43,6 +43,10 @@ sub opt_spec {
             "name issues' workspaces with prefixes",
         ],
         [
+            "no-tracker|n",
+            "don't use information from task tracker",
+        ],
+        [
             "source|s=s",
             "name of source workspace",
             {
@@ -96,17 +100,22 @@ sub _get_task_tracker_api_object {
 }
 
 sub construct_dest_ws {
-    my ($self, $dest_opt, $source_ws) = @_;
+    my ($self, $dest_opt, $source_ws, $opt) = @_;
 
     my $dest = $dest_opt;
-    if ($self->{_task_tracker_client}->can("get_issue_with_project")) {
-        if ($self->{_task_tracker_client}->is_issue_exists($dest_opt)) {
-            $dest = $self->{_task_tracker_client}->get_issue_with_project($dest_opt);
-        }
-    }
+
     my $dest_desktop = App::I3::Krautcat::Desktop->new($dest);
     if ($dest_desktop->is_name_fully_qualified) {
         return "$dest_opt";
+    }
+    
+
+    if (not $opt->{no_tracker}) {
+        if ($self->{_task_tracker_client}->can("get_issue_with_project")) {
+            if ($self->{_task_tracker_client}->is_issue_exists($dest_opt)) {
+                $dest = $self->{_task_tracker_client}->get_issue_with_project($dest_opt);
+            }
+        }
     }
     
     my $dest_number = $self->{desktops}->get_sort_number($dest_desktop);
@@ -131,7 +140,7 @@ sub execute {
     my ($self, $opt, $args) = @_;
 
     my $source_ws = App::I3::Krautcat::Desktop->new($opt->{source});
-    my $dest_ws = $self->construct_dest_ws($opt->{dest}, $source_ws);
+    my $dest_ws = $self->construct_dest_ws($opt->{dest}, $source_ws, $opt);
 
     my $cmd = "rename workspace \"$source_ws\" to \"$dest_ws\"";
     my $reply = $self->{i3_client}->message(AnyEvent::I3::TYPE_COMMAND, $cmd)->recv();

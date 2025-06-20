@@ -112,6 +112,15 @@ sub get_issue_with_project {
     "$project | $issue_id";
 }
 
+sub get_info_from_desktop_name {
+    my $self = shift;
+    my $desktop_name = shift;
+
+    utf8::decode($desktop_name);
+    my @splitted_name = split(/\ \|\ /x, $desktop_name);
+    return @splitted_name;
+}
+
 sub _get_issue_info_jsoned {
     my $self = shift;
     my $issue_id = shift;

@@ -64,13 +64,13 @@ sub get_sort_number {
 
     my $type = undef;
 
-    my $project = $self->_pms_client->get_project_name($desktop_name);
-    if (defined $project and $self->_pms_client->is_issue_exists($desktop_name)) {
-       $type = "__tickets__";
+    my @name_parts = split(/ \| /, $desktop_name);
+    if (scalar @name_parts == 2 and exists $self->_ranges->ranges->{$name_parts[0]}) {
+        $type = $name_parts[0];
     } else {
-        my @name_parts = split(/ \| /, $desktop_name);
-        if (scalar @name_parts == 2 and exists $self->_ranges->ranges->{$name_parts[0]}) {
-            $type = $name_parts[0];
+        my ($project, $issue_id) = $self->_pms_client->get_info_from_desktop_name($desktop_name);
+        if (defined $project and $self->_pms_client->is_issue_exists($issue_id)) {
+            $type = "__tickets__";
         } else {
             $type = "__unprefixed__";
         }
@@ -92,10 +92,19 @@ sub _guess_desktop_number {
     }
 
     if (not defined $number) {
-        if ($type eq "__unprefixed__") {
+        if ($type =~ /^(?!__)/) {
+            my ($prefix, $name) = split " | ", $desktop_name;
+            my $range = $self->_ranges->ranges->{$prefix};
+            $number = $range->get_first_free_number(
+                grep { $range->in($_) }
+                grep { defined $_ }
+                map { $_->{number} }
+                @{$self->_desktops}
+            )
+        } elsif ($type eq "__unprefixed__") {
             $number = $self->_get_number_from_unprefixed 
         } elsif ($type eq "__tickets__") {
-            my $project = $self->_pms_client->get_project_name($desktop_name);
+            my ($project, $issue_id) = $self->_pms_client->get_info_from_desktop_name($desktop_name);
             my %project_to_range = $self->_get_project_ranges;
            
             my $get_from_unprefixed = 0; 
@@ -125,15 +134,6 @@ sub _guess_desktop_number {
             if ($get_from_unprefixed) {
                 $number = $self->_get_number_from_unprefixed
             }
-        } else {
-            my ($prefix, $name) = split " | ", $desktop_name;
-            my $range = $self->_ranges->ranges->{$prefix};
-            $number = $range->get_first_free_number(
-                grep { $range->in($_) }
-                grep { defined $_ }
-                map { $_->{number} }
-                @{$self->_desktops}
-            )
         }
     }
 
@@ -146,9 +146,8 @@ sub _get_project_ranges {
     my %range_to_project;
 
     foreach my $desktop (@{$self->_desktops}) {
-        my $project = $self->_pms_client->get_project_name($desktop->{name});
+        my ($project, $issue_id) = $self->_pms_client->get_info_from_desktop_name($desktop->{name});
         if (not defined $project
-                or not $self->_pms_client->is_issue_exists($desktop->{name})
                 or not $self->_ranges->ranges->{__tickets__}->in($desktop->{number})) {
             next
         }
