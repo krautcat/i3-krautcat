@@ -32,18 +32,14 @@ has _pms_client => (
 );
 
 around BUILDARGS => sub {
-    my ($orig, $class, @args) = @_;
-
-    my $desktops = shift @args;
-    my $configuration = shift @args;
-    my $pms_client = shift @args;
+    my ($orig, $class, $desktops, $configuration, $pms_client) = @_;
     
     my @desktop_collection = map { App::I3::Krautcat::Desktop->new($_, $configuration) } @$desktops;
     return {
         _desktops => \@desktop_collection,
  
-        _ranges => $configuration->{ranges},
-        _fixed => $configuration->{fixed},
+        _ranges => $configuration->ranges,
+        _fixed => $configuration->fixed,
 
         _pms_client => $pms_client,
     };
@@ -62,11 +58,9 @@ sub get_sort_number {
         return $self->_fixed->{$desktop->name};
     }
 
-    my $type = undef;
-
-    if (not exists $self->_ranges->ranges->{$desktop->tag}) {
+    if (not defined $desktop->tag) {
         my ($project, $issue_id) = $self->_pms_client->get_info_from_desktop_name($desktop->name);
-        if (defined $project and $self->_pms_client->is_issue_exists($issue_id)) {
+        if (defined $project and defined $issue_id and $self->_pms_client->is_issue_exists($issue_id)) {
             $desktop->tag("__tickets__");
         } else {
             $desktop->tag("__unprefixed__");
@@ -86,14 +80,19 @@ sub _guess_desktop_number {
         return $existing_desktops[0]->number
     }
 
-    if ($desktop->tag =~ /^(?!__)/) {
-        my $range = $self->_ranges->ranges->{$desktop->{tag}};
-        $number = $range->get_first_free_number(
-            grep { $range->in($_) }
-            grep { defined $_ }
-            map { $_->number }
-            @{$self->_desktops}
-        )
+    if ($desktop->tag =~ /^(?!__)/x) {
+        if (exists $self->_ranges->ranges->{$desktop->tag}) {
+            my $range = $self->_ranges->ranges->{$desktop->tag};
+        
+            $number = $range->get_first_free_number(
+                grep { $range->in($_) }
+                grep { defined $_ }
+                map { $_->number }
+                @{$self->_desktops}
+            )
+        } else {
+            $number = $self->_get_number_from_unprefixed;
+        }
     } elsif ($desktop->tag eq "__unprefixed__") {
         $number = $self->_get_number_from_unprefixed 
     } elsif ($desktop->tag eq "__tickets__") {

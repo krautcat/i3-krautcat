@@ -91,7 +91,7 @@ sub new {
 sub _get_task_tracker_api_object {
     my $self = shift;
 
-    my $task_tracker = $self->{configuration}->{task_tracker};
+    my $task_tracker = $self->{configuration}->task_tracker;
     my $pkg_name = "App::I3::Krautcat::API::$task_tracker";
     if (defined eval "require $pkg_name") {
         no strict 'refs';
@@ -109,7 +109,7 @@ sub construct_dest_ws {
         return "$dest_opt";
     }
 
-    if (not defined $dest_desktop->{tag} or not $opt->{no_tracker}) {
+    if (not defined $dest_desktop->tag or not $opt->{no_tracker}) {
         if ($self->{_task_tracker_client}->can("get_issue_with_project")) {
             if ($self->{_task_tracker_client}->is_issue_exists($dest_opt)) {
                 $dest = $self->{_task_tracker_client}->get_issue_with_project($dest_opt);

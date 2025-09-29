@@ -28,8 +28,8 @@ around BUILDARGS => sub {
 
     if (blessed($args[0]) && $args[0]->isa("App::I3::Krautcat::Configuration")) {
         return {
-            _server => URI->new($args[0]->{cfg}->{api}->{redmine}->{server}),
-            _api_key => $args[0]->{cfg}->{api}->{redmine}->{api_key},
+            _server => URI->new($args[0]->cfg->{api}->{redmine}->{server}),
+            _api_key => $args[0]->cfg->{api}->{redmine}->{api_key},
         }
     } else {
         return {
@@ -66,11 +66,11 @@ sub is_issue_exists {
         } elsif ($status_code == 404) {
             $cv->send(0)
         } else {
-            die "Error $status_code";
+            croak "Error $status_code";
         }
     });
 
-    $cv->recv;
+    return $cv->recv;
 }
 
 sub get_project_name {
@@ -100,7 +100,7 @@ sub get_project_name {
 
     my $project_name = $issue->{project}->{name};
     utf8::decode($project_name);
-    $project_name;
+    return $project_name;
 }
 
 sub get_issue_with_project {
@@ -109,7 +109,7 @@ sub get_issue_with_project {
     my $project = $self->get_project_name($issue_id);
 
 
-    "$project | $issue_id";
+    return "$project | $issue_id";
 }
 
 sub get_info_from_desktop_name {
@@ -153,11 +153,11 @@ sub _get_issue_info_jsoned {
         } elsif ($status_code == 404 or $status_code == 422) {
             $cv->send(undef);
         } else {
-            die "Error $status_code";
+            croak "Error $status_code";
         }
     });
     
-    $cv;
+    return $cv;
 }
 
 1;

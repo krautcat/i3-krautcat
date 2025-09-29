@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use feature 'say';
 
+use Carp qw/croak/;
 use Scalar::Util qw( blessed );
 
 use Moo;
@@ -16,7 +17,7 @@ use URI ();
 
 has _server => (
     is => "ro",
-    isa => sub { die "$_[0] is not URI" unless blessed($_[0]) && $_[0]->isa("URI") }
+    isa => sub { croak "$_[0] is not URI" unless blessed($_[0]) && $_[0]->isa("URI") }
 );
 
 has _token => (

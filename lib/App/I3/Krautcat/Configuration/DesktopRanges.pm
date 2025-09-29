@@ -22,7 +22,7 @@ around BUILDARGS => sub {
             if ($_ eq "__tickets__") {
                 $step = 10
             }
-            "$_" => App::I3::Krautcat::Configuration::DesktopRange->new($args[0]{$_}, step => $step)
+            "$_" => App::I3::Krautcat::Configuration::DesktopRange->new($args[0]->{$_}, step => $step)
         } keys %{$args[0]}; 
 
     return {

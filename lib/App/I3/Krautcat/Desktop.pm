@@ -91,7 +91,7 @@ sub _get_desktop_properties {
     if (not defined $name) {
         $name = $tag;
         $tag = undef;
-    } elsif (not exists $configuration->{ranges}->ranges->{$tag}) {
+    } elsif (defined $configuration and not exists $configuration->ranges->{ranges}->{$tag}) {
         $name = "$tag | $name";
         $tag = undef;
     }

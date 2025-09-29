@@ -31,7 +31,7 @@ around BUILDARGS => sub {
     my $range_param = shift @args;
     my %named_params = @args;
 
-    if (ref $range_param  eq 'ARRAY') {
+    if (ref $range_param eq 'ARRAY') {
         if (scalar @{$range_param} == 1) {
             return {
                 from => $range_param->[0],
@@ -68,8 +68,9 @@ sub listify {
 }
 
 sub in {
-    my $self = shift;
-    my $number = shift;
+    my ($self, $number) = @_;
+
+    return 0 if not defined $number;
 
     if (defined $self->to) {
         return ($number >= $self->from and $number < $self->to) ? 1 : 0

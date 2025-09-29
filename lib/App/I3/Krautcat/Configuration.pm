@@ -4,46 +4,63 @@ use strict;
 use warnings;
 use 5.016;
 
-use TOML::Tiny;
+use Carp qw/croak/;
+
 use File::BaseDir;
+use Moo;
+use TOML::Tiny;
 
 use App::I3::Krautcat::MonitorToNumber;
 use App::I3::Krautcat::Configuration::DesktopRanges;
 
-sub new {
-    my ($class, %args) = @_;
+has cfg => (
+    is => "ro",
+);
 
-    my $self = bless {}, $class;
+has _monitor_to_number => (
+    is => "ro",
+);
 
-    my $bd = File::BaseDir->new();
-    my $config_file_path = $bd->config_home('i3', 'krautcat.ini');
+has ranges => (
+    is => "ro",
+);
 
-    my $toml_string = $self->_read_config($config_file_path);
-    $self->{cfg} = my $cfg = TOML::Tiny->new()->decode($toml_string);
+has fixed => (
+    is => "ro",
+);
 
-    $self->{_monitor_to_number} = $self->_parse_monitor_to_number($cfg);
-    $self->{ranges} = App::I3::Krautcat::Configuration::DesktopRanges->new($cfg->{desktop}->{ranges});
-    $self->{fixed} = $cfg->{desktop}->{fixed};
+has task_tracker => (
+    is => "ro",
+);
 
-    $self->{task_tracker} = $cfg->{general}->{'task-tracker'};
+around BUILDARGS => sub {
+    my ($orig, $class, %args) = @_;
 
-    return $self;
-}
+    my $config_file_path = File::BaseDir->new()->config_home("i3", "krautcat.ini");
+
+    $args{cfg} = TOML::Tiny->new()->decode($class->_read_config($config_file_path));
+    $args{_monitor_to_number} = $class->_parse_monitor_to_number($args{cfg});
+    $args{ranges} = App::I3::Krautcat::Configuration::DesktopRanges->new($args{cfg}->{desktop}->{ranges});
+    $args{fixed} = $args{cfg}->{desktop}->{fixed};
+    $args{task_tracker} = $args{cfg}->{general}->{'task-tracker'};
+
+    return $class->$orig(\%args);
+};
 
 sub _read_config {
-    my ($self, $path) = @_;
+    my ($class, $path) = @_;
     my $toml_string = do {
         local $/ = undef;
         open my $fh, "<", $path
-            or die "Could not open file '$path': $!";
+            or croak "Could not open file '$path': $!";
         <$fh>
     };
 
-    $toml_string
+    return $toml_string
 }
 
 sub _parse_monitor_to_number {
-    my ($self, $cfg) = @_;
+    my ($class, $cfg) = @_;
     my $section = "outputs";
     my @monitor_to_number = ();
 
