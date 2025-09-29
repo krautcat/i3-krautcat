@@ -38,7 +38,7 @@ around BUILDARGS => sub {
     my $configuration = shift @args;
     my $pms_client = shift @args;
     
-    my @desktop_collection = map { App::I3::Krautcat::Desktop->new($_) } @$desktops;
+    my @desktop_collection = map { App::I3::Krautcat::Desktop->new($_, $configuration) } @$desktops;
     return {
         _desktops => \@desktop_collection,
  

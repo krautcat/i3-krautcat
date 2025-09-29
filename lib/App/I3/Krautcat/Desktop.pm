@@ -38,7 +38,7 @@ has focused => (
 );
 
 around BUILDARGS => sub {
-    my ($orig, $class, $arg) = @_;
+    my ($orig, $class, $arg, $configuration) = @_;
 
     my $args = {number        => undef,
                 output_number => undef,
@@ -64,7 +64,7 @@ around BUILDARGS => sub {
         $full_name = $arg;
     }
 
-    my ($number, $output_number, $tag, $name) = $class->_get_desktop_properties($full_name);
+    my ($number, $output_number, $tag, $name) = $class->_get_desktop_properties($full_name, $configuration);
 
     $args->{number} = $number               if defined $number;
     $args->{output_number} = $output_number if defined $number;
@@ -75,7 +75,7 @@ around BUILDARGS => sub {
 };
 
 sub _get_desktop_properties {
-    my ($class, $desktop_name) = @_;
+    my ($class, $desktop_name, $configuration) = @_;
 
     my ($number, $output_number, $name) = (undef, undef, undef);
 
@@ -90,6 +90,9 @@ sub _get_desktop_properties {
     ($tag, $name) = split(/ \| /x, $name);
     if (not defined $name) {
         $name = $tag;
+        $tag = undef;
+    } elsif (not exists $configuration->{ranges}->ranges->{$tag}) {
+        $name = "$tag | $name";
         $tag = undef;
     }
 
