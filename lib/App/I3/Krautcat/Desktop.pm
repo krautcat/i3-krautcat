@@ -9,82 +9,91 @@ use overload
 
 use Moo;
 
-sub new {
-    my ($class, $value) = @_;
+has number => (
+    is => "rw",
+);
 
-    my $self = bless {}, $class;
+has output_number => (
+    is => "rw",
+);
 
-    if (ref($value) eq "HASH") {
-        $self->_init_from_i3_msg($value);
+has output_name => (
+    is => "rw",
+);
+
+has tag => (
+    is => "rw",
+);
+
+has name => (
+    is => "rw",
+);
+
+has original_name => (
+    is => "ro",
+);
+
+has focused => (
+    is => "ro",
+);
+
+around BUILDARGS => sub {
+    my ($orig, $class, $arg) = @_;
+
+    my $args = {number        => undef,
+                output_number => undef,
+                output_name   => undef,
+                tag           => undef,
+                name          => undef,
+                original_name => undef,
+                focused       => undef,
+    };
+
+    my $full_name;
+    if (ref($arg) eq "HASH") {
+        if ($arg->{focused}) {
+            $args->{focused} = 1;
+        } else {
+            $args->{focused} = 0;
+        }
+        $args->{original_name} = $arg->{name};
+        $args->{output_name} = $arg->{output};
+        $full_name = $arg->{name}
     } else {
-        $self->_init_from_desktop_name_string($value);
+        $args->{original_name} = $arg;
+        $full_name = $arg;
     }
 
-    return $self;
-}
+    my ($number, $output_number, $tag, $name) = $class->_get_desktop_properties($full_name);
 
-sub _init_from_i3_msg {
-    my ($self, $ws) = @_;
+    $args->{number} = $number               if defined $number;
+    $args->{output_number} = $output_number if defined $number;
+    $args->{tag} = $tag                     if defined $tag;
+    $args->{name} = $name                   if defined $name;
 
-    $self->_init_();
-
-    if ($ws->{focused}) {
-        $self->{focused} = 1;
-    } else {
-        $self->{focused} = 0;
-    }
-    $self->{original_name} = $ws->{name};
-    $self->{output_name} = $ws->{output};
-
-    my ($number, $output_number, $name) = $self->_get_desktop_properties($ws->{name});
-
-    $self->{number} = $number if defined $number;
-    $self->{output_number} = $output_number if defined $number;
-    $self->{name} = $name if defined $name;
-}
-
-sub _init_from_desktop_name_string {
-    my ($self, $value) = @_;
-
-    $self->_init_();
-
-    $self->{original_name} = $value;
-
-    my ($number, $output_number, $name) = $self->_get_desktop_properties($value);
-
-    $self->{number} = $number if defined $number;
-    $self->{output_number} = $output_number if defined $number;
-    $self->{name} = $name if defined $name;
-}
-
-sub _init_ {
-    my $self = shift;
-
-    $self->{number} = undef;
-    $self->{output_number} = undef;
-    $self->{output_name} = undef;
-    $self->{name} = undef;
-    $self->{original_name} = undef;
-
-    $self->{focused} = undef;
-
-    return $self;
-}
+    return $class->$orig($args);
+};
 
 sub _get_desktop_properties {
-    my ($self, $desktop_name) = @_;
+    my ($class, $desktop_name) = @_;
 
     my ($number, $output_number, $name) = (undef, undef, undef);
 
     my $tag = undef;
-    ($tag, $name) = split /:/, $desktop_name;
+    ($tag, $name) = split /:/x, $desktop_name;
     if (not defined $name) {
         $name = $tag;
     } else {
         ($number, $output_number) = split / /, $tag;
     }
 
-    return ($number, $output_number, $name);
+    ($tag, $name) = split(/ \| /x, $name);
+    if (not defined $name) {
+        $name = $tag;
+        $tag = undef;
+    }
+
+    return ($number, $output_number, $tag, $name);
 }
 
 sub stringify {
@@ -102,12 +111,10 @@ sub full_name {
 sub is_name_fully_qualified {
     my $self = shift;
 
-    if (defined $self->{name}
-        and defined $self->{number} != 0
-        and defined $self->{output_number}) {
-        return 1
+    if (defined $self->{name} and defined $self->{number} != 0 and defined $self->{output_number}) {
+        return 1;
     } else {
-        return 0
+        return 0;
     }
 }
 

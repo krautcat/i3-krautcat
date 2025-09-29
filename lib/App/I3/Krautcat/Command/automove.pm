@@ -77,20 +77,20 @@ sub execute {
 
     my $focused_ws;
     foreach my $ws (@workspaces) {
-        if ($ws->{focused}) {
+        if ($ws->focused) {
             $focused_ws = $ws;
         }
 
         # Find appropriate output.
         my $output = undef;
-        if (defined $ws->{output_number}) {
+        if (defined $ws->output_number) {
             foreach (@{$self->{configuration}->monitor_to_number}) {
-                if ($_->number == $ws->{output_number}) {
+                if ($_->number == $ws->output_number) {
                     $output = $_->output;
                 }
             }
         } else {
-            $output = $ws->{output_name};
+            $output = $ws->output_name;
         }
 
         my $reply = $self->{i3_client}->message(AnyEvent::I3::TYPE_COMMAND, "workspace $ws")->recv;

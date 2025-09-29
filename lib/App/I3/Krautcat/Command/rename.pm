@@ -108,9 +108,8 @@ sub construct_dest_ws {
     if ($dest_desktop->is_name_fully_qualified) {
         return "$dest_opt";
     }
-    
 
-    if (not $opt->{no_tracker}) {
+    if (not defined $dest_desktop->{tag} or not $opt->{no_tracker}) {
         if ($self->{_task_tracker_client}->can("get_issue_with_project")) {
             if ($self->{_task_tracker_client}->is_issue_exists($dest_opt)) {
                 $dest = $self->{_task_tracker_client}->get_issue_with_project($dest_opt);

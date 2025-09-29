@@ -51,93 +51,85 @@ around BUILDARGS => sub {
 
 sub listify {
     my $self = shift;
-    $self->_desktops
+    return $self->_desktops
 }
 
 sub get_sort_number {
     my $self = shift;
-    my $desktop_name = shift;
+    my $desktop = shift;
 
-    if (grep { "$desktop_name" eq $_ } keys %{$self->_fixed}) {
-        return $self->_fixed->{$desktop_name};
+    if (grep { $desktop->name eq $_ } keys %{$self->_fixed}) {
+        return $self->_fixed->{$desktop->name};
     }
 
     my $type = undef;
 
-    my @name_parts = split(/ \| /, $desktop_name);
-    if (scalar @name_parts == 2 and exists $self->_ranges->ranges->{$name_parts[0]}) {
-        $type = $name_parts[0];
-    } else {
-        my ($project, $issue_id) = $self->_pms_client->get_info_from_desktop_name($desktop_name);
+    if (not exists $self->_ranges->ranges->{$desktop->tag}) {
+        my ($project, $issue_id) = $self->_pms_client->get_info_from_desktop_name($desktop->name);
         if (defined $project and $self->_pms_client->is_issue_exists($issue_id)) {
-            $type = "__tickets__";
+            $desktop->tag("__tickets__");
         } else {
-            $type = "__unprefixed__";
+            $desktop->tag("__unprefixed__");
         }
     }
 
-    my $number = $self->_guess_desktop_number($desktop_name, $type);
-    $number
+    return $self->_guess_desktop_number($desktop);
 }
 
 sub _guess_desktop_number {
-    my $self = shift;
-    my ($desktop_name, $type) = @_;
+    my ($self, $desktop) = @_;
 
     my $number = undef;
 
-    my @existing_desktops = grep { $_->{name} eq "$desktop_name" } @{$self->_desktops};
+    my @existing_desktops = grep { $_->name eq $desktop->name } @{$self->_desktops};
     if (@existing_desktops) {
-        $number = $existing_desktops[0]->{number}
+        return $existing_desktops[0]->number
     }
 
-    if (not defined $number) {
-        if ($type =~ /^(?!__)/) {
-            my ($prefix, $name) = split " | ", $desktop_name;
-            my $range = $self->_ranges->ranges->{$prefix};
-            $number = $range->get_first_free_number(
-                grep { $range->in($_) }
+    if ($desktop->tag =~ /^(?!__)/) {
+        my $range = $self->_ranges->ranges->{$desktop->{tag}};
+        $number = $range->get_first_free_number(
+            grep { $range->in($_) }
+            grep { defined $_ }
+            map { $_->number }
+            @{$self->_desktops}
+        )
+    } elsif ($desktop->tag eq "__unprefixed__") {
+        $number = $self->_get_number_from_unprefixed 
+    } elsif ($desktop->tag eq "__tickets__") {
+        my ($project, $issue_id) = $self->_pms_client->get_info_from_desktop_name($desktop->name);
+        my %project_to_range = $self->_get_project_ranges;
+       
+        my $get_from_unprefixed = 0; 
+        my $subrange_start;
+        if (exists $project_to_range{$project}) {
+            $subrange_start = $project_to_range{$project}
+        } else {
+            $subrange_start = $self->_ranges->ranges->{__tickets__}->get_first_free_number(values %project_to_range);
+            if (not defined $subrange_start) {
+                 $get_from_unprefixed = 1; 
+            }
+        }
+
+        if (not $get_from_unprefixed) {
+            my $subrange = App::I3::Krautcat::Configuration::DesktopRange->new($subrange_start, step => 1);
+            my @desktops_numbers_in_subrange = grep { $subrange->in($_) }
                 grep { defined $_ }
-                map { $_->{number} }
-                @{$self->_desktops}
-            )
-        } elsif ($type eq "__unprefixed__") {
-            $number = $self->_get_number_from_unprefixed 
-        } elsif ($type eq "__tickets__") {
-            my ($project, $issue_id) = $self->_pms_client->get_info_from_desktop_name($desktop_name);
-            my %project_to_range = $self->_get_project_ranges;
-           
-            my $get_from_unprefixed = 0; 
-            my $subrange_start;
-            if (exists $project_to_range{$project}) {
-                $subrange_start = $project_to_range{$project}
-            } else {
-                $subrange_start = $self->_ranges->ranges->{__tickets__}->get_first_free_number(values %project_to_range);
-                if (not defined $subrange_start) {
-                     $get_from_unprefixed = 1; 
-                }
+                map { $_->number }
+                @{$self->_desktops};
+
+            $number = $subrange->get_first_free_number(@desktops_numbers_in_subrange);
+            if (not defined $number) {
+                $get_from_unprefixed = 1
             }
+        } 
 
-            if (not $get_from_unprefixed) {
-                my $subrange = App::I3::Krautcat::Configuration::DesktopRange->new($subrange_start, step => 1);
-                my @desktops_numbers_in_subrange = grep { $subrange->in($_) }
-                    grep { defined $_ }
-                    map { $_->{number} }
-                    @{$self->_desktops};
-
-                $number = $subrange->get_first_free_number(@desktops_numbers_in_subrange);
-                if (not defined $number) {
-                    $get_from_unprefixed = 1
-                }
-            } 
-
-            if ($get_from_unprefixed) {
-                $number = $self->_get_number_from_unprefixed
-            }
+        if ($get_from_unprefixed) {
+            $number = $self->_get_number_from_unprefixed
         }
     }
 
-    $number
+    return $number
 }
 
 sub _get_project_ranges {
@@ -146,13 +138,13 @@ sub _get_project_ranges {
     my %range_to_project;
 
     foreach my $desktop (@{$self->_desktops}) {
-        my ($project, $issue_id) = $self->_pms_client->get_info_from_desktop_name($desktop->{name});
+        my ($project, $issue_id) = $self->_pms_client->get_info_from_desktop_name($desktop->name);
         if (not defined $project
-                or not $self->_ranges->ranges->{__tickets__}->in($desktop->{number})) {
+                or not $self->_ranges->ranges->{__tickets__}->in($desktop->number)) {
             next
         }
         
-        my $range_number = $desktop->{number} - $desktop->{number} % 10;
+        my $range_number = $desktop->number - $desktop->number % 10;
         $range_to_project{$range_number}{$project} += 1;
     }
 
@@ -172,14 +164,14 @@ sub _get_project_ranges {
         }
     }
 
-    %project_to_ranges
+    return %project_to_ranges
 }
 
 sub _get_number_from_unprefixed {
     my $self = shift;
 
     my $range = $self->_ranges->ranges->{__unprefixed__};
-    my @desktops_numbers_in_range = grep { $range->in($_) } map { $_->{number} } @{$self->_desktops};
+    my @desktops_numbers_in_range = grep { $range->in($_) } map { $_->number } @{$self->_desktops};
     return $range->get_first_free_number(@desktops_numbers_in_range);
 }
 

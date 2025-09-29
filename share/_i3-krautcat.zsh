@@ -24,7 +24,7 @@ function _i3-krautcat() {
             ;;
     esac
 
-    return ret
+    return $ret
 }
 
 _i3-krautcat_rename() {
