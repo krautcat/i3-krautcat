@@ -108,7 +108,14 @@ sub stringify {
 sub full_name {
     my $self = shift;
 
-    return "$self->{number} $self->{output_number}:$self->{name}";
+    my $name;
+    if (defined $self->tag) {
+        $name = "$self->tag | $self->name";
+    } else {
+        $name = $self->name;
+    }
+
+    return "$self->{number} $self->{output_number}:$name";
 }
 
 sub is_name_fully_qualified {
